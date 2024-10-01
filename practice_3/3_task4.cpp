@@ -70,13 +70,13 @@ int main() {
         cout << step << " => ";
     }
     cout << "Конец цепочки" << endl;
+
     // Вывод цепочки решений для итеративного метода
     cout << "\nЦепочка решений (итеративно):" << endl;
     for (const auto& step : iterative_chain) {
         cout << step << " => ";
     }
     cout << "Конец цепочки" << endl;
-
 
     return 0;
 }
