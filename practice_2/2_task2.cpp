@@ -1,244 +1,196 @@
 #include <iostream>
+#include <fstream>
+#include <Windows.h>
 #include <cmath>
 #include <vector>
-#include <iomanip> // Заголовочный файл для форматирования вывода
-#include <chrono>  // Для более точного времени, с <ctime> возникли проблемы, не получалось найти точное время
-#include <fstream> // Для работы с файлами
-#include <sstream> // Для работы со строками
+#include <iomanip>
+#include <math.h>
+#include <ctime>
 
 using namespace std;
-using namespace std::chrono;
 
-typedef double (*Func)(double);
-
-double example_function(double x) { // Функция x**3 - x + e**(-x)
-    return pow(x, 3) - x + exp(-x);
+double f(double x){
+    return pow(x, 3) - x + expf(-x);
 }
 
-// Пассивный поиск (перебор)
-pair<double, double> passive_search(Func f, double a, double b, double h, int& iterations, bool find_max, ostringstream& oss) {
-    double extreme_x = a;
-    double extreme_f = f(a);
-
-    for (double x = a; x <= b; x += h) {
-        iterations++;
-        double current_f = f(x);
-        if ((find_max && current_f > extreme_f) || (!find_max && current_f < extreme_f)) {
-            extreme_f = current_f;
-            extreme_x = x;
-        }
+vector<double> gen_fibo(double a,double b, double eps){
+    double delta = b - a;
+    vector<double> fib{1, 1};
+    while (delta / (fib.back() + fib[fib.size() - 1 - 1]) > eps){
+        fib.insert(fib.end(), 1, fib.back() + fib[fib.size() - 2]);
     }
-
-    return make_pair(extreme_x, extreme_f);
+    return fib;
 }
 
-// Метод деления отрезка пополам
-pair<double, double> bisection_method(Func f, double a, double b, double epsilon, vector<pair<double, double>>& steps, int& iterations, bool find_max, ostringstream& oss) {
-    double a0 = a, b0 = b;
-    int iter_count = 0;
-
-    while ((b0 - a0) > epsilon) {
-        iter_count++;
-        
-        double delta = (b0 - a0) / 10;
-        double alpha0 = a0 + (b0 - a0) / 2 - delta;
-        double beta0 = a0 + (b0 - a0) / 2 + delta;
-
-        double f_alpha = f(alpha0);
-        double f_beta = f(beta0);
-
-        if ((find_max && f_alpha <= f_beta) || (!find_max && f_alpha >= f_beta)) {
-            b0 = beta0;
-        } 
-        else {
-            a0 = alpha0;
-        }
-
-        steps.push_back({(a0 + b0) / 2, f((a0 + b0) / 2)});
+pair<double, double> gold_search(double a, double b, int k, double eps, vector<double> fibo, int areMin) {
+    double a1, b1 = 0;
+    double delta = b - a;
+    double a0 = a + (fibo[fibo.size() - k - 2 - 1]/fibo[fibo.size() - k - 1]) * delta;
+    double b0 = a + (fibo[fibo.size() - k - 1 - 1]/fibo[fibo.size() - k - 1]) * delta;
+    if (f(a0) * areMin <= f(b0) * areMin) {
+        a1 = a;
+        b1 = b0;
+    } else {
+        a1 = a0;
+        b1 = b;
     }
 
-    double extreme_x = (a0 + b0) / 2.0;
-    iterations = iter_count;
-
-    return make_pair(extreme_x, f(extreme_x));
+    return pair<double, double>{a1, b1};
 }
 
-// Метод золотого сечения
-pair<double, double> golden_section_search(Func f, double a, double b, double epsilon, vector<pair<double, double>>& steps, int& iterations, bool find_max, ostringstream& oss) {
-    const double phi = (1 + sqrt(5)) / 2;
-    const double resphi = 2 - phi;
-
-    double x1 = a + resphi * (b - a);
-    double x2 = b - resphi * (b - a);
-    double f1 = f(x1);
-    double f2 = f(x2);
-    int iter_count = 0;
-
-    while (abs(b - a) > epsilon) {
-        iter_count++;
-        steps.push_back({x1, f1});
-        if ((find_max && f1 < f2) || (!find_max && f1 > f2)) {
-            b = x2;
-            x2 = x1;
-            f2 = f1;
-            x1 = a + resphi * (b - a);
-            f1 = f(x1);
-        } else {
-            a = x1;
-            x1 = x2;
-            f1 = f2;
-            x2 = b - resphi * (b - a);
-            f2 = f(x2);
-        }
+pair<double, double> fibo_search(double a, double b, double eps, vector<double> fibo, int areMin) {
+    double a1, b1 = 0;
+    double delta = b - a;
+    double a0 = a + (2 * delta)/(3 + sqrt(5));
+    double b0 = a + (2 * delta)/(1 + sqrt(5));
+    if (f(a0) * areMin <= f(b0) * areMin) {
+        a1 = a;
+        b1 = b0;
+    } else {
+        a1 = a0;
+        b1 = b;
     }
 
-    double extreme_x = (a + b) / 2.0;
-    steps.push_back({extreme_x, f(extreme_x)});
-    iterations = iter_count;
-    return make_pair(extreme_x, f(extreme_x));
+    return pair<double, double>{a1, b1};
 }
 
-// Метод Фибоначчи
-pair<double, double> fibonacci_search(Func f, double a, double b, double epsilon, vector<pair<double, double>>& steps, int& iterations, bool find_max, ostringstream& oss, int n = 1000) {
-    vector<int> fib(n + 1, 1);
-    for (int i = 2; i <= n; ++i) {
-        fib[i] = fib[i - 1] + fib[i - 2];
+pair<double, double> divide(double a, double b, double eps, int areMin) {
+    double a1, b1;
+    double delta = (b - a) / 10;
+    double a0 = (a + b) / 2 - delta;
+    double b0 = (a0 + 2 * delta);
+    if (f(a0) * areMin <= f(b0) * areMin) {
+        a1 = a;
+        b1 = b0;
+    } else {
+        a1 = a0;
+        b1 = b;
     }
-
-    int k = 1;
-    double delta0 = b - a;
-    while (delta0 / fib[k + 1] > epsilon) {
-        k++;
-    }
-
-    double a0 = a, b0 = b;
-    double x1 = a0 + double(fib[k - 2]) / fib[k] * (b0 - a0);
-    double x2 = a0 + double(fib[k - 1]) / fib[k] * (b0 - a0);
-    double f1 = f(x1);
-    double f2 = f(x2);
-    int iter_count = 0;
-
-    while (abs(b0 - a0) > epsilon) {
-        iter_count++;
-        steps.push_back({x1, f1});
-        if ((find_max && f1 < f2) || (!find_max && f1 > f2)) {
-            b0 = x2;
-            x2 = x1;
-            f2 = f1;
-            x1 = a0 + double(fib[k - 2]) / fib[k] * (b0 - a0);
-            f1 = f(x1);
-        } else {
-            a0 = x1;
-            x1 = x2;
-            f1 = f2;
-            x2 = a0 + double(fib[k - 1]) / fib[k] * (b0 - a0);
-            f2 = f(x2);
-        }
-        k--;
-    }
-
-    double extreme_x = (a0 + b0) / 2.0;
-    steps.push_back({extreme_x, f(extreme_x)});
-    iterations = iter_count;
-    return make_pair(extreme_x, f(extreme_x));
+    return pair<double, double>(a1, b1);
 }
 
-// Вывод шагов метода
-void print_steps(const vector<pair<double, double>>& steps, ostringstream& oss) {
-    oss << "Шаги приближений (x, f(x)):\n";
-    for (const auto& step : steps) {
-        oss << "x = " << step.first << ", f(x) = " << step.second << endl;
-    }
-}
+const double EPS = 0.000001;
+const double H = 0.001;
 
 int main() {
-    double a, b, epsilon, h;
-    bool find_max;
+    vector<vector<double>> in = {{-5, -3, 1}, {0, 3, 1}, {-3, 0, -1}};
+    ofstream out;
+    out.open("out.txt");
+    for (int i = 0; i < 3; i++) {
+        int A = in[i][0];
+        int B = in[i][1];
+        int areMin = in[i][2];
+        double a = A;
+        double b = B;
+        int counter = 0;
+        clock_t start, finish;
+        double duration;
 
-    // Буфер для накопления вывода
-    ostringstream oss;
 
-    // Печатаем вопросы и считываем ответы
-    oss << "Введите границы интервала [a, b]:\n";
-    cout << oss.str();
-    cin >> a >> b;
-    oss << "Границы интервала [a, b]: " << a << " " << b << endl;
+        //Метод перебора
+        start = clock();
 
-    oss << "Введите требуемую точность epsilon:\n";
-    cout << oss.str();
-    cin >> epsilon;
-    oss << "Точность epsilon: " << epsilon << endl;
+        double min=INFINITE, x, y, xm;
+        int step = 0;
+        for(x = a; x <= b; x = x + H){
+            step++;
+            y = f(x) * areMin;
+            if(y < min){
+                min=y;
+                xm=x;
+            };
+        }
+        finish = clock();
+        out << "iterations: "<< step << "| min x = "<< xm << "f(x) = " << min * areMin << "\ttime: "<< (double)(finish - start) / CLOCKS_PER_SEC << endl;
+        out << endl;
+        printf("iterations: %d | min x = %f, f(x) = %f    time: %lf\n\n", step, xm, min * areMin, (double)(finish - start) / CLOCKS_PER_SEC);
+        //Метод «деления отрезка пополам»
+        printf("Method of dividing a segment in half\n");
+        pair<double, double> res;
+        start = clock();
+        while (true) {
+            double x;
 
-    oss << "Введите шаг для пассивного поиска h:\n";
-    cout << oss.str();
-    cin >> h;
-    oss << "Шаг для пассивного поиска h: " << h << endl;
+            counter++;
+            res = divide(a, b, EPS, areMin);
+            a = res.first;
+            b = res.second;
+            x = (b+a) / 2;
+            y = f(x);
+            out << "iteration " << counter << ": x = " << x << ", f(x) = " << y << endl;
+            printf("iteration %d: x = %f, f(x) = %f \n",counter, x, y);
+            if (b - a < EPS){
+                finish = clock();
+                out << "iterations: "<< counter << "| min x = "<< x << "f(x) = " << y << "\ttime: "<< (double)(finish - start) / CLOCKS_PER_SEC << endl;
+                out << endl;
+                printf("iterations: %d | x= %lf, f(x) = %lf     time:%f\n", counter, x, y, (double)(finish - start) / CLOCKS_PER_SEC);
+                break;
+            }
+        }
+        printf("\n");
 
-    oss << "Введите 1 для поиска максимума или 0 для поиска минимума:\n";
-    cout << oss.str();
-    cin >> find_max;
-    oss << "Поиск максимума (1) или минимума (0): " << find_max << endl;
+        start = clock();
+        counter = 0;
 
-    // Время выполнения и количество итераций
-    vector<pair<double, double>> steps_bisection, steps_fib, steps_golden;
+        //Метод «золотого сечения»
 
-    int iterations_passive = 0, iterations_bisection = 0, iterations_golden = 0, iterations_fib = 0;
+        printf("Golden ratio method\n");
+        int k = 0;
+        a = A;
+        b = B;
+        vector<double> fibo = gen_fibo(a, b, EPS);
+        while (true) {
+            double x;
 
-    // Пассивный поиск
-    auto start = high_resolution_clock::now();
-    auto result_passive = passive_search(example_function, a, b, h, iterations_passive, find_max, oss);
-    auto stop = high_resolution_clock::now();
-    auto duration_passive = duration_cast<microseconds>(stop - start);
+            counter++;
+            res = gold_search(a, b, k, EPS, fibo, areMin);
+            a = res.first;
+            b = res.second;
+            x = (b + a) / 2;
+            y = f(x);
+            out << "iteration " << counter << ": x = " << x << ", f(x) = " << y << endl;
+            printf("iteration %d: x = %f, f(x) = %f \n",counter, x, y);
+            if (b - a < EPS) {
+                finish = clock();
+                out << "iterations: "<< counter << "| min x = "<< x << "f(x) = " << y << "\ttime: "<< (double)(finish - start) / CLOCKS_PER_SEC << endl;
+                out << endl;
+                printf("iterations: %d | x = %lf, f(x) = %lf, time: %f\n", counter, x, y, (double)(finish - start) / CLOCKS_PER_SEC);
+                out << endl;
+                break;
+            }
+            k = k + 1;
+        }
+        printf("\n");
 
-    oss << "\nМетод пассивного поиска:\n";
-    oss << "Экстремум x = " << result_passive.first << ", f(x) = " << result_passive.second << endl;
-    oss << "Время выполнения: " << duration_passive.count() / 1e6 << " сек\n";
-    oss << "Количество итераций: " << iterations_passive << endl;
+        //метод «фибоначи»
+        printf("Fibonacci method\n");
+        start = clock();
+        counter = 0;
+        a = A;
+        b = B;
+        while (true) {
+            double x;
 
-    // Метод деления отрезка пополам
-    start = high_resolution_clock::now();
-    auto result_bisection = bisection_method(example_function, a, b, epsilon, steps_bisection, iterations_bisection, find_max, oss);
-    stop = high_resolution_clock::now();
-    auto duration_bisection = duration_cast<microseconds>(stop - start);
-
-    oss << "\nМетод деления отрезка пополам:\n";
-    print_steps(steps_bisection, oss);
-    oss << "Экстремум x = " << result_bisection.first << ", f(x) = " << result_bisection.second << endl;
-    oss << "Время выполнения: " << duration_bisection.count() / 1e6 << " сек\n";
-    oss << "Количество итераций: " << iterations_bisection << endl;
-
-    // Метод золотого сечения
-    start = high_resolution_clock::now();
-    auto result_golden = golden_section_search(example_function, a, b, epsilon, steps_golden, iterations_golden, find_max, oss);
-    stop = high_resolution_clock::now();
-    auto duration_golden = duration_cast<microseconds>(stop - start);
-
-    oss << "\nМетод золотого сечения:\n";
-    print_steps(steps_golden, oss);
-    oss << "Экстремум x = " << result_golden.first << ", f(x) = " << result_golden.second << endl;
-    oss << "Время выполнения: " << duration_golden.count() / 1e6 << " сек\n";
-    oss << "Количество итераций: " << iterations_golden << endl;
-
-    // Метод Фибоначчи
-    start = high_resolution_clock::now();
-    auto result_fib = fibonacci_search(example_function, a, b, epsilon, steps_fib, iterations_fib, find_max, oss);
-    stop = high_resolution_clock::now();
-    auto duration_fib = duration_cast<microseconds>(stop - start);
-
-    oss << "\nМетод Фибоначчи:\n";
-    print_steps(steps_fib, oss);
-    oss << "Экстремум x = " << result_fib.first << ", f(x) = " << result_fib.second << endl;
-    oss << "Время выполнения: " << duration_fib.count() / 1e6 << " сек\n";
-    oss << "Количество итераций: " << iterations_fib << endl;
-
-    // Вывод в файл
-    ofstream file("output.txt");
-    if (file.is_open()) {
-        file << oss.str();
-        file.close();
-    } else {
-        cerr << "Не удалось открыть файл для записи." << endl;
+            counter++;
+            res = fibo_search(a, b, EPS, fibo, areMin);
+            a = res.first;
+            b = res.second;
+            x = (b + a) / 2;
+            y = f(x);
+            out << "iteration " << counter << ": x = " << x << ", f(x) = " << y << endl;
+            printf("iteration %d: x = %f, f(x) = %f \n",counter, x, y);
+            if (b - a < EPS) {
+                finish = clock();
+                out << "iterations: "<< counter << "| min x = "<< x << "f(x) = " << y << "\ttime: "<< (double)(finish - start) / CLOCKS_PER_SEC << endl;
+                out << endl;
+                printf("iterations: %d | x = %lf, f(x) = %lf, time: %f\n", counter, x, y, (double)(finish - start) / CLOCKS_PER_SEC);
+                out << endl;
+                break;
+            }
+        }
+        printf("\n");
     }
-
+    out.close();
+    scanf("%d");
     return 0;
 }
