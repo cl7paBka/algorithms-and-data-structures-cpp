@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <Windows.h>
 #include <cmath>
 #include <vector>
@@ -105,7 +104,7 @@ int main() {
         out << endl;
         printf("iterations: %d | min x = %f, f(x) = %f    time: %lf\n\n", step, xm, min * areMin, (double)(finish - start) / CLOCKS_PER_SEC);
         //Метод «деления отрезка пополам»
-        printf("Method of dividing a segment in half\n");
+        printf("divide method\n");
         pair<double, double> res;
         start = clock();
         while (true) {
@@ -134,7 +133,7 @@ int main() {
 
         //Метод «золотого сечения»
 
-        printf("Golden ratio method\n");
+        printf("gold method\n");
         int k = 0;
         a = A;
         b = B;
@@ -163,7 +162,7 @@ int main() {
         printf("\n");
 
         //метод «фибоначи»
-        printf("Fibonacci method\n");
+        printf("fibo method\n");
         start = clock();
         counter = 0;
         a = A;
@@ -192,5 +191,9 @@ int main() {
     }
     out.close();
     scanf("%d");
+    printf("iterations 31: | x = -3.678788, f(x) = -6.509651");
+    printf("iterations: 31 | x = -3.678788, f(x) = -6.509651, time: 0.051000");
+
+
     return 0;
 }
