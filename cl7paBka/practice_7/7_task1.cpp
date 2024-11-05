@@ -9,7 +9,7 @@ struct Node {
 };
 
 // Функция для инициализации кольцевого списка
-Node* Init_Circle(int n) {
+Node* list_circle(int n) {
     Node *head = new Node; // создаем первый узел
     head->data = 1;        // присваиваем значение первому участнику
     Node *prev = head;
@@ -27,7 +27,7 @@ Node* Init_Circle(int n) {
 }
 
 // Функция для удаления узла с шагом m и нахождения последнего участника
-int Josephus_Circle(Node *head, int m) {
+int josephus(Node *head, int m) {
     Node *current = head;
     Node *prev = nullptr;
     
@@ -55,8 +55,8 @@ int main() {
     
     // Для каждого m от 2 до 20 выводим результат
     for (int m = 2; m <= 20; m++) {
-        Node *circle = Init_Circle(n);  // создаем новый список для каждого m
-        int last_person = Josephus_Circle(circle, m);
+        Node *circle = list_circle(n);  // создаем новый список для каждого m
+        int last_person = josephus(circle, m);
         cout << "При m = " << m << " последний оставшийся участник: " << last_person << endl;
     }
 
