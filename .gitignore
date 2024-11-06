@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Python specific
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Operating System files
+.DS_Store
+Thumbs.db
+*.swp
+
+# Git
+.git/
